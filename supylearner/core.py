@@ -110,7 +110,7 @@ class SuperLearner(BaseEstimator):
         -------
         self : returns an instance of self.
         """
-        
+      
         n=len(y)
         if self.stratifyCV==False:
             folds = cv.KFold(n, self.K) #ordinary cross-validation
@@ -119,7 +119,11 @@ class SuperLearner(BaseEstimator):
 
         y_pred_cv = np.empty(shape=(n, self.n_estimators))
         for train_index, test_index in folds:
-            X_train, X_test=X[train_index], X[test_index]
+            if isinstance(X, pd.DataFrame):
+                #pandas DFs expect indices to refer to column labels unless with iloc 
+                X_train, X_test=X.iloc[train_index], X.iloc[test_index]
+            else:
+                X_train, X_test=X[train_index], X[test_index]
             y_train, y_test=y[train_index], y[test_index]
             for aa in range(self.n_estimators):
                 est=clone(self.library[aa])
