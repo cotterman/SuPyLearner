@@ -35,6 +35,10 @@ class SuperLearner(BaseEstimator):
     coef_method : Method for estimating weights for weighted combination
                   of estimators in the library. 'L_BFGS_B', 'NNLS', or 'SLSQP'.
 
+    stratifyCV : True to create folds containing approximately the same percentage 
+                    of samples of each target class as the complete set 
+                    during cross-validation steps.
+
     Attributes
     ----------
 
@@ -59,13 +63,13 @@ class SuperLearner(BaseEstimator):
     X, y=datasets.make_friedman1(1000)
 
     ols=linear_model.LinearRegression()
-    elnet=linear_model.ElasticNetCV(rho=.1)
+    elnet=linear_model.ElasticNetCV(l1_ratio=.1) 
     ridge=linear_model.RidgeCV()
     lars=linear_model.LarsCV()
     lasso=linear_model.LassoCV()
     nn=neighbors.KNeighborsRegressor()
-    svm1=svm.SVR(scale_C=True) 
-    svm2=svm.SVR(kernel='poly', scale_C=True)
+    svm1=svm.SVR() 
+    svm2=svm.SVR(kernel='poly')
     lib=[ols, elnet, ridge,lars, lasso, nn, svm1, svm2]
     libnames=["OLS", "ElasticNet", "Ridge", "LARS", "LASSO", "kNN", "SVM rbf", "SVM poly"]
 
@@ -78,7 +82,7 @@ class SuperLearner(BaseEstimator):
     """
     
     def __init__(self, library, libnames=None, K=5, loss='L2', discrete=False, coef_method='SLSQP',\
-                 save_pred_cv=False, bound=0.00001):
+                 save_pred_cv=False, bound=0.00001, stratifyCV=False):
         self.library=library[:]
         self.libnames=libnames
         self.K=K
@@ -88,6 +92,7 @@ class SuperLearner(BaseEstimator):
         self.n_estimators=len(library)
         self.save_pred_cv=save_pred_cv
         self.bound=bound
+        self.stratifyCV=stratifyCV
     
     def fit(self, X, y):
         """
@@ -107,7 +112,10 @@ class SuperLearner(BaseEstimator):
         """
         
         n=len(y)
-        folds = cv.KFold(n, self.K)
+        if self.stratifyCV==False:
+            folds = cv.KFold(n, self.K) #ordinary cross-validation
+        elif self.stratifyCV==True:
+            folds = cv.StratifiedKFold(y, self.K) #keep balance of outcome in folds
 
         y_pred_cv = np.empty(shape=(n, self.n_estimators))
         for train_index, test_index in folds:
@@ -307,16 +315,7 @@ class SuperLearner(BaseEstimator):
             pred=est.predict(X)
         if self.loss == 'nloglik':
             if hasattr(est, "predict_proba"):
-                #There should be a better way to do this
-                #for SVM classifier
-                if est.__class__.__name__ == "SVC":
-                    pred=est.predict_proba(X)[:, 0]
-
-                #for logistic regression
-                elif est.__class__.__name__ == "LogisticRegression":
-                    pred=est.predict_proba(X)[:, 1]
-                else:
-                    pred=est.predict_proba(X)
+                pred=est.predict_proba(X)[:, 1]
             else:
                 pred=est.predict(X)
                 if pred.min() < 0 or pred.max() > 1:
@@ -375,7 +374,7 @@ def _inv_logit(x):
         
     
 
-def cv_superlearner(sl, X, y, K=5):
+def cv_superlearner(sl, X, y, K=5, stratifyCV=False):
     """
     Cross validate the SuperLearner sl as well as all candidates in
     sl.library and print results.
@@ -405,7 +404,10 @@ def cv_superlearner(sl, X, y, K=5):
     library = sl.library[:]
 
     n=len(y)
-    folds=cv.KFold(n, K)
+    if stratifyCV==False:
+        folds = cv.KFold(n, K) #ordinary cross-validation
+    elif stratifyCV==True:
+        folds = cv.StratifiedKFold(y, K) #keep balance of outcome in folds
     y_pred_cv = np.empty(shape=(n, len(library)+1))
     
 
