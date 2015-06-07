@@ -465,9 +465,6 @@ def cv_superlearner(sl, X, y, K=5, stratifyCV=False, shuffleCV=True):
         #Take mean across volds
         risk_cv[aa]= np.mean(risks)
 
-    #use predicted values to get other measures of performance
-    
-
     if sl.libnames is None:
         libnames=[est.__class__.__name__ for est in sl.library]
     else:
