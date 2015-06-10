@@ -154,7 +154,7 @@ class SuperLearner(BaseEstimator):
             
         #obtain risks of each algorithm (including SL) using the cv predictions
             #predictions used for SL are just the convex combo of algorithm's cv predictions
-            #therefore, SL risk is no cross-validated
+            #therefore, SL risk is not cross-validated
         self.risk_cv=[]
         for aa in range(self.n_estimators):
             self.risk_cv.append(self._get_risk(y, y_pred_cv[:,aa]))
@@ -166,7 +166,7 @@ class SuperLearner(BaseEstimator):
         return self
                         
     
-    def predict(self, X):
+    def predict_proba(self, X):
         """
         Predict using SuperLearner
 
@@ -394,7 +394,9 @@ def _inv_logit(x):
     
         
     
-
+#could probably get rid of the cv_superlearner function in future since 
+    #the sklearn cross_validation module will do the same thing
+    #with consistency to other learners in python
 def cv_superlearner(sl, X, y, K=5, stratifyCV=False, shuffleCV=True):
     """
     Cross validate the SuperLearner sl as well as all candidates in
@@ -453,7 +455,7 @@ def cv_superlearner(sl, X, y, K=5, stratifyCV=False, shuffleCV=True):
             y_pred_cv[test_index, aa]=sl._get_pred(est, X_test)
         #fit SL to this fold of data (will initiate additional split+fits of algorithms)
         sl.fit(X_train, y_train)
-        y_pred_cv[test_index, len(library)]=sl.predict(X_test)
+        y_pred_cv[test_index, len(library)]=sl.predict_proba(X_test)
 
     #use predicted values to get risk estimates (for each estimator and for SL)
     risk_cv=np.empty(shape=(len(library)+1, 1))
