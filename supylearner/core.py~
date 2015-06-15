@@ -336,7 +336,12 @@ class SuperLearner(BaseEstimator):
             pred=est.predict(X)
         if self.loss == 'nloglik':
             if hasattr(est, "predict_proba"):
-                pred=est.predict_proba(X)[:, 1]
+                #when "The columns correspond to the classes in sorted order, 
+                    #as they appear in the attribute classes_" -- LDA, svm.SVC
+                if est.__class__.__name__ == "SVC" or est.__class__.__name__ == "LDA":
+                    pred=est.predict_proba(X)[:, 0]
+                else:
+                    pred=est.predict_proba(X)[:, 0] 
             else:
                 pred=est.predict(X)
                 if pred.min() < 0 or pred.max() > 1:
@@ -455,7 +460,7 @@ def cv_superlearner(sl, X, y, K=5, stratifyCV=False, shuffleCV=True):
             y_pred_cv[test_index, aa]=sl._get_pred(est, X_test)
         #fit SL to this fold of data (will initiate additional split+fits of algorithms)
         sl.fit(X_train, y_train)
-        y_pred_cv[test_index, len(library)]=sl.predict(X_test)
+        y_pred_cv[test_index, len(library)]=sl.predict_proba(X_test)
 
     #use predicted values to get risk estimates (for each estimator and for SL)
     risk_cv=np.empty(shape=(len(library)+1, 1))
