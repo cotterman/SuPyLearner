@@ -336,7 +336,10 @@ class SuperLearner(BaseEstimator):
             pred=est.predict(X)
         if self.loss == 'nloglik':
             if hasattr(est, "predict_proba"):
-                pred=est.predict_proba(X)[:, 1]
+                if est.__class__.__name__ == "SVC":
+                    pred=est.predict_proba(X)[:, 0]
+                else:
+                    pred=est.predict_proba(X)[:, 1]
             else:
                 pred=est.predict(X)
                 if pred.min() < 0 or pred.max() > 1:
