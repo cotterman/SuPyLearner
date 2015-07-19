@@ -307,20 +307,22 @@ class SuperLearner(BaseEstimator):
             def ff(x):
                 return self._get_risk(y, self._get_combination(y_pred_cv, x))
             def constr(x):
-                return np.array([ np.sum(x)-1 ])
-            x0=np.array([1./self.n_estimators]*self.n_estimators)
-            bds=[(0,1)]*self.n_estimators
-            coef_init, b, c, d, e = fmin_slsqp(ff, x0, f_eqcons=constr, bounds=bds, disp=0, full_output=1)
+                return np.array([ np.sum(x)-1 ]) #coefs should sum to 1
+            x0=np.array([1./self.n_estimators]*self.n_estimators) #initial guess
+            bds=[(0,1)]*self.n_estimators #each coef should be between 0 and 1, inclusive
+            coef_init, b, c, d, e = fmin_slsqp(ff, x0, f_eqcons=constr, 
+                bounds=bds, disp=0, full_output=1)
             if d is not 0:
+                print "SL optimization exit code: " , d
                 raise SLError("fmin_slsqp failed when trying to calculate coefficients")
 
         else: raise ValueError("method not recognized")
         coef_init = np.array(coef_init)
         #All coefficients should be non-negative or possibly a very small negative number,
-        #But setting small values to zero makes them nicer to look at and doesn't really change anything
+        #But setting small values to zero makes them nicer to look at and hardly changes anything
         coef_init[coef_init < np.sqrt(np.finfo(np.double).eps)] = 0
-        #Coefficients should already sum to (almost) one if method is 'SLSQP', and should be really close
-        #for the other methods if loss is 'L2' anyway.
+        #Coefficients should already sum to (almost) one if method is 'SLSQP', 
+        #and should be really close for the other methods if loss is 'L2' anyway.
         coef = coef_init/np.sum(coef_init)
         return coef
 
